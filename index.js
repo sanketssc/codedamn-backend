@@ -22,85 +22,11 @@ const ports = {
 
 const app = express();
 app.use(express.json());
-const directoryPath = "/home/exathought/Documents/nextjs";
 app.use(cors());
-
-function getFiles(fPath, f) {
-  // console.log(fPath, f);
-  try {
-    const files = fs.readdirSync(fPath);
-    files.map((file) => {
-      // if (file === "node_modules") return;
-      if (file === ".git") return;
-      // if (file === ".next") return;
-      const filePath = path.join(fPath, file);
-      const stats = fs.statSync(filePath);
-      // console.log(file);
-      // console.log(stats.isDirectory());
-      if (stats.isDirectory()) {
-        const idx = f.findIndex((o) => o.name === file);
-        if (idx !== -1) {
-          f[idx].files.push({
-            name: file,
-            type: "folder",
-            path: filePath,
-            files: [],
-          });
-          getFiles(filePath, f[idx].files.files);
-        } else {
-          f.push({ name: file, type: "folder", path: filePath, files: [] });
-          getFiles(filePath, f[f.length - 1].files);
-        }
-      } else {
-        const idx = f.findIndex((o) => o.name === file);
-        if (idx !== -1) {
-          f[idx].files.push({ name: file, type: "file", path: filePath });
-        } else {
-          f.push({ name: file, type: "file", path: filePath });
-        }
-      }
-      f.sort((a, b) => {
-        if (a.type === "folder") {
-          if (b.type === "folder") {
-            return a.name > b.name;
-          } else {
-            return -1;
-          }
-        }
-        return 1;
-      });
-    });
-  } catch (err) {
-    // console.log(fPath, f);
-    // console.log(err);
-  }
-}
-
-app.get("/api/files", (req, res) => {
-  const files = [
-    {
-      name: "nextjs",
-      type: "folder",
-      path: "/home/exathought/Documents/nextjs",
-      files: [],
-    },
-  ];
-  getFiles(directoryPath, files[0].files);
-  console.log(files.length);
-  res.json(files);
-});
-
-app.post("/api/file", (req, res) => {
-  const { path } = req.body;
-  console.log(req.body);
-  console.log(path);
-  const data = fs.readFileSync(path, "utf8");
-  res.json({ data });
-});
 
 app.post("/api/project", (req, res) => {
   try {
-    const { project } = req.body;
+    const { project, skeleton } = req.body;
 
     const index = Object.keys(projects).findIndex((p) => p === project);
     if (index !== -1) {
@@ -113,6 +39,7 @@ app.post("/api/project", (req, res) => {
       return;
     }
     projects[project] = {
+      skeleton: skeleton,
       running: false,
       port: ports[Object.keys(projects).length],
     };
@@ -134,6 +61,7 @@ app.post("/api/project/run", (req, res) => {
     if (!projects[project].running) {
       console.log("running container");
       projects[project].running = true;
+      console.log(projects);
 
       const docker = spawn("docker", [
         "run",
@@ -142,8 +70,8 @@ app.post("/api/project/run", (req, res) => {
         "-p",
         `${projects[project].port.backend}:5000`,
         "--name",
-        `${project}-con`,
-        "next-full:latest",
+        `${project}-${projects[project].skeleton}-con`,
+        `${projects[project].skeleton}-full:latest`,
       ]);
 
       docker.stdout.on("data", (data) => {
@@ -152,7 +80,10 @@ app.post("/api/project/run", (req, res) => {
 
       docker.stderr.on("data", (data) => {
         console.log(data.toString());
-        const docker2 = spawn("docker", ["start", `${project}-con`]);
+        const docker2 = spawn("docker", [
+          "start",
+          `${project}-${projects[project].skeleton}-con`,
+        ]);
         docker2.stdout.on("data", (data) => {
           console.log(data.toString());
         });
@@ -169,7 +100,10 @@ app.post("/api/project/run", (req, res) => {
         res.json({ status: "success", ports: projects[project].port });
       });
     } else {
-      const docker3 = spawn("docker", ["start", `${project}-con`]);
+      const docker3 = spawn("docker", [
+        "start",
+        `${project}-${projects[project].skeleton}-con`,
+      ]);
       docker3.stdout.on("data", (data) => {
         console.log(data.toString());
       });
@@ -187,6 +121,7 @@ app.post("/api/project/run", (req, res) => {
     }
     // res.json({ status: "error", message: "Project already running" });
   } catch (error) {
+    console.log(error);
     res.json({ status: "error", message: "Error running project" });
   }
 });
@@ -201,7 +136,10 @@ app.post("/api/project/stop", (req, res) => {
     console.log(projects);
     if (projects[project].running) {
       console.log("stopping container");
-      const docker = spawn("docker", ["stop", `${project}-con`]);
+      const docker = spawn("docker", [
+        "stop",
+        `${project}-${projects[project].skeleton}-con`,
+      ]);
 
       docker.stdout.on("data", (data) => {
         console.log(data.toString());

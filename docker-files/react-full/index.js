@@ -22,13 +22,9 @@ function getFiles(fPath, f) {
   try {
     const files = fs.readdirSync(fPath);
     files.map((file) => {
-      // if (file === "node_modules") return;
       if (file === ".git") return;
-      // if (file === ".next") return;
       const filePath = path.join(fPath, file);
       const stats = fs.statSync(filePath);
-      // console.log(file);
-      // console.log(stats.isDirectory());
       if (stats.isDirectory()) {
         const idx = f.findIndex((o) => o.name === file);
         if (idx !== -1) {
@@ -90,7 +86,7 @@ io.on("connection", (socket) => {
     name: "xterm-color",
     cols: 80,
     rows: 30,
-    cwd: "/next-app",
+    cwd: "/react-app",
     env: process.env,
   });
 
@@ -122,11 +118,11 @@ io.on("connection", (socket) => {
         name: "code",
         type: "folder",
         isOpen: true,
-        path: "/next-app",
+        path: "/react-app",
         files: [],
       },
     ];
-    getFiles("/next-app", files[0].files);
+    getFiles("/react-app", files[0].files);
     socket.emit("files", files);
   });
 
@@ -172,11 +168,11 @@ io.on("connection", (socket) => {
         name: "code",
         type: "folder",
         isOpen: true,
-        path: "/next-app",
+        path: "/react-app",
         files: [],
       },
     ];
-    getFiles("/next-app", files[0].files);
+    getFiles("/react-app", files[0].files);
     socket.emit("files", files);
   });
 
@@ -194,12 +190,12 @@ io.on("connection", (socket) => {
         name: "code",
         type: "folder",
         isOpen: true,
-        path: "/next-app",
+        path: "/react-app",
         files: [],
       },
     ];
 
-    getFiles("/next-app", files[0].files);
+    getFiles("/react-app", files[0].files);
     socket.emit("files", files);
   });
 
